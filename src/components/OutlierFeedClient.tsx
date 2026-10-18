@@ -6,11 +6,13 @@ import OutlierVideoCard from "@/components/OutlierVideoCard";
 import { OutlierVideo, quickFilters } from "@/lib/mock-videos";
 import { formatTimeAgo } from "@/lib/format";
 import { OutlierResult } from "@/app/api/outliers/route";
+import { OutlierFilters, defaultFilters, filtersToSearchParams } from "@/lib/outlier-filters";
 
 function toOutlierVideo(r: OutlierResult): OutlierVideo {
   return {
     id: r.id,
     title: r.title,
+    thumbnailUrl: r.thumbnailUrl,
     durationLabel: r.durationLabel,
     channelName: r.channelName,
     views: r.views,
@@ -25,19 +27,25 @@ export default function OutlierFeedClient({ videos }: { videos: OutlierVideo[] }
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [activeChip, setActiveChip] = useState(quickFilters[0]);
   const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState<OutlierFilters>(defaultFilters());
   const [results, setResults] = useState<OutlierVideo[]>(videos);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLive, setIsLive] = useState(false);
 
-  async function runSearch(e: React.FormEvent) {
-    e.preventDefault();
+  const filterParams = filtersToSearchParams(filters);
+  const activeFilterCount = Array.from(filterParams.keys()).length;
+
+  async function runSearch(e?: React.FormEvent, overrideFilters?: OutlierFilters) {
+    e?.preventDefault();
     if (!query.trim()) return;
 
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/outliers?q=${encodeURIComponent(query)}`);
+      const params = filtersToSearchParams(overrideFilters ?? filters);
+      params.set("q", query);
+      const res = await fetch(`/api/outliers?${params.toString()}`);
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Search failed");
       setResults((data.results as OutlierResult[]).map(toOutlierVideo));
@@ -47,6 +55,11 @@ export default function OutlierFeedClient({ videos }: { videos: OutlierVideo[] }
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleApplyFilters(next: OutlierFilters) {
+    setFilters(next);
+    if (isLive) runSearch(undefined, next); // re-run against the live result set
   }
 
   return (
@@ -69,9 +82,14 @@ export default function OutlierFeedClient({ videos }: { videos: OutlierVideo[] }
         <button
           type="button"
           onClick={() => setFiltersOpen(true)}
-          className="rounded-md border border-white/10 bg-neutral-900 px-4 py-2 text-sm hover:bg-white/5"
+          className="relative rounded-md border border-white/10 bg-neutral-900 px-4 py-2 text-sm hover:bg-white/5"
         >
           Filters
+          {activeFilterCount > 0 && (
+            <span className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-cyan-500 text-[10px] font-bold text-neutral-950">
+              {activeFilterCount}
+            </span>
+          )}
         </button>
       </form>
 
@@ -108,7 +126,13 @@ export default function OutlierFeedClient({ videos }: { videos: OutlierVideo[] }
         ))}
       </div>
 
-      {filtersOpen && <FiltersModal onClose={() => setFiltersOpen(false)} />}
+      {filtersOpen && (
+        <FiltersModal
+          filters={filters}
+          onApply={handleApplyFilters}
+          onClose={() => setFiltersOpen(false)}
+        />
+      )}
     </div>
   );
 }

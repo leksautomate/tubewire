@@ -10,8 +10,20 @@ function multiplierColor(m: number): string {
 export default function OutlierVideoCard({ video }: { video: OutlierVideo }) {
   return (
     <div className="overflow-hidden rounded-lg border border-white/10 bg-neutral-900/60">
-      <div className="relative flex aspect-video items-center justify-center bg-neutral-800 text-xs text-neutral-500">
-        thumbnail
+      <div className="relative aspect-video bg-neutral-800">
+        {video.thumbnailUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- external YouTube
+          // thumbnail URLs; no domain-list config needed for a plain <img>.
+          <img
+            src={video.thumbnailUrl}
+            alt={video.title}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-xs text-neutral-500">
+            thumbnail
+          </div>
+        )}
         <span className="absolute bottom-1.5 right-1.5 rounded bg-black/80 px-1 py-0.5 text-[10px] font-medium">
           {video.durationLabel}
         </span>

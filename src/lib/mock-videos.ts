@@ -5,6 +5,7 @@
 export type OutlierVideo = {
   id: string;
   title: string;
+  thumbnailUrl?: string; // absent on mock entries, which render a placeholder
   durationLabel: string;
   channelName: string;
   views: number;

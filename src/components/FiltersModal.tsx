@@ -1,8 +1,26 @@
 "use client";
 
+import { useState } from "react";
 import DualRangeSlider from "@/components/DualRangeSlider";
+import { FILTER_BOUNDS, OutlierFilters, defaultFilters } from "@/lib/outlier-filters";
 
-export default function FiltersModal({ onClose }: { onClose: () => void }) {
+type Props = {
+  filters: OutlierFilters;
+  onApply: (filters: OutlierFilters) => void;
+  onClose: () => void;
+};
+
+const minutesFmt = (seconds: number) => `${Math.round(seconds / 60)} min`;
+const countFmt = (v: number) => v.toLocaleString();
+
+export default function FiltersModal({ filters, onApply, onClose }: Props) {
+  // Draft state so Reset/close-without-applying don't affect the live query
+  // until "Apply Filters" is clicked.
+  const [draft, setDraft] = useState<OutlierFilters>(filters);
+
+  const set = (key: keyof OutlierFilters) => (value: [number, number]) =>
+    setDraft((d) => ({ ...d, [key]: value }));
+
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-6">
       <div className="w-full max-w-3xl rounded-xl border border-white/10 bg-neutral-900 p-6">
@@ -16,72 +34,66 @@ export default function FiltersModal({ onClose }: { onClose: () => void }) {
         <div className="mb-4 text-sm font-medium text-neutral-300">Main Metrics</div>
         <div className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
           <DualRangeSlider
-            label="Average Views"
-            min={1000}
-            max={1_000_000}
-            step={1000}
-            formatValue={(v) => v.toLocaleString()}
+            label="Average Views (channel)"
+            {...FILTER_BOUNDS.avgViews}
+            value={draft.avgViews}
+            onChange={set("avgViews")}
+            formatValue={countFmt}
           />
           <DualRangeSlider
             label="Video Duration"
-            min={2}
-            max={45}
-            formatValue={(v) => `${v} min`}
+            {...FILTER_BOUNDS.durationSec}
+            value={draft.durationSec}
+            onChange={set("durationSec")}
+            formatValue={minutesFmt}
           />
-          <DualRangeSlider label="Outlier Score" min={0} max={100} formatValue={(v) => `${v}x`} />
+          <DualRangeSlider
+            label="Outlier Score"
+            {...FILTER_BOUNDS.outlier}
+            value={draft.outlier}
+            onChange={set("outlier")}
+            formatValue={(v) => `${v}x`}
+          />
           <DualRangeSlider
             label="Subscribers"
-            min={1000}
-            max={1_000_000}
-            step={1000}
-            formatValue={(v) => v.toLocaleString()}
+            {...FILTER_BOUNDS.subs}
+            value={draft.subs}
+            onChange={set("subs")}
+            formatValue={countFmt}
           />
           <DualRangeSlider
             label="Video Views"
-            min={1000}
-            max={10_000_000}
-            step={1000}
-            formatValue={(v) => v.toLocaleString()}
+            {...FILTER_BOUNDS.views}
+            value={draft.views}
+            onChange={set("views")}
+            formatValue={countFmt}
           />
-          <DualRangeSlider label="Channel Video Count" min={1} max={1000} />
-        </div>
-
-        <div className="mt-6">
-          <label className="mb-2 block text-sm text-neutral-300">Video Upload Date</label>
-          <input
-            type="date"
-            className="w-full rounded-md border border-white/10 bg-neutral-800 px-3 py-2 text-sm"
+          <DualRangeSlider
+            label="Channel Video Count"
+            {...FILTER_BOUNDS.videoCount}
+            value={draft.videoCount}
+            onChange={set("videoCount")}
+            formatValue={countFmt}
           />
         </div>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-3">
-          {["Category", "Language", "Country"].map((label) => (
-            <div key={label}>
-              <label className="mb-2 block text-sm text-neutral-300">{label}</label>
-              <select className="w-full rounded-md border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-neutral-400">
-                <option>{label}</option>
-              </select>
-            </div>
-          ))}
-        </div>
+        <p className="mt-6 text-xs text-neutral-500">
+          Category, Language, Country and Sort aren&apos;t wired to a real data source
+          yet — the numeric filters above run against live YouTube results.
+        </p>
 
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          {["Sort By", "Sort Order"].map((label) => (
-            <div key={label}>
-              <label className="mb-2 block text-sm text-neutral-300">{label}</label>
-              <select className="w-full rounded-md border border-white/10 bg-neutral-800 px-3 py-2 text-sm text-neutral-400">
-                <option>{label}</option>
-              </select>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 flex justify-end gap-3">
-          <button className="rounded-md border border-white/10 px-4 py-2 text-sm text-neutral-300 hover:bg-white/5">
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            onClick={() => setDraft(defaultFilters())}
+            className="rounded-md border border-white/10 px-4 py-2 text-sm text-neutral-300 hover:bg-white/5"
+          >
             Reset Filters
           </button>
           <button
-            onClick={onClose}
+            onClick={() => {
+              onApply(draft);
+              onClose();
+            }}
             className="rounded-md bg-cyan-500 px-4 py-2 text-sm font-medium text-neutral-950 hover:bg-cyan-400"
           >
             Apply Filters
