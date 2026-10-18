@@ -1,17 +1,30 @@
-const NAV_SECTIONS: { label: string; items: string[] }[] = [
-  { label: "", items: ["Overview", "AI Recommendations"] },
+import Link from "next/link";
+
+const NAV_SECTIONS: { label: string; items: { name: string; href: string }[] }[] = [
+  {
+    label: "",
+    items: [
+      { name: "Overview", href: "/" },
+      { name: "AI Recommendations", href: "#" },
+    ],
+  },
   {
     label: "Channels",
     items: [
-      "Long Form Channels",
-      "Short Form Channels",
-      "Real Time Channels",
-      "Terminated Channels",
+      { name: "Long Form Channels", href: "#" },
+      { name: "Short Form Channels", href: "#" },
+      { name: "Real Time Channels", href: "#" },
+      { name: "Terminated Channels", href: "#" },
     ],
   },
   {
     label: "",
-    items: ["Thumbnail Search", "Keywords", "Channel Tracker", "Faceless Outliers"],
+    items: [
+      { name: "Thumbnail Search", href: "#" },
+      { name: "Keywords", href: "#" },
+      { name: "Channel Tracker", href: "#" },
+      { name: "Faceless Outliers", href: "/outliers" },
+    ],
   },
 ];
 
@@ -36,13 +49,13 @@ export default function Sidebar() {
               </div>
             )}
             {section.items.map((item) => (
-              <a
-                key={item}
-                href="#"
+              <Link
+                key={item.name}
+                href={item.href}
                 className="block rounded-md px-2 py-1.5 text-neutral-300 hover:bg-white/5 hover:text-white"
               >
-                {item}
-              </a>
+                {item.name}
+              </Link>
             ))}
           </div>
         ))}
