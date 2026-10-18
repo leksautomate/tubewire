@@ -3,13 +3,15 @@
 // from the environment and must only run on the server (API routes,
 // server components, server actions).
 
+import { getSetting } from "@/lib/settings";
+
 const BASE_URL = "https://www.googleapis.com/youtube/v3";
 
-function apiKey(): string {
-  const key = process.env.YOUTUBE_API_KEY;
+async function apiKey(): Promise<string> {
+  const key = await getSetting("YOUTUBE_API_KEY");
   if (!key) {
     throw new Error(
-      "YOUTUBE_API_KEY is not set. Add it to .env.local (server-side only)."
+      "YOUTUBE_API_KEY is not set. Add it in /admin, or in .env.local for local dev."
     );
   }
   return key;
@@ -17,7 +19,7 @@ function apiKey(): string {
 
 async function youtubeFetch<T>(path: string, params: Record<string, string>): Promise<T> {
   const url = new URL(`${BASE_URL}/${path}`);
-  url.searchParams.set("key", apiKey());
+  url.searchParams.set("key", await apiKey());
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
 
   const res = await fetch(url.toString());

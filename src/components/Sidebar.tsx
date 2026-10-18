@@ -5,7 +5,7 @@ const NAV_SECTIONS: { label: string; items: { name: string; href: string }[] }[]
     label: "",
     items: [
       { name: "Overview", href: "/" },
-      { name: "AI Recommendations", href: "#" },
+      { name: "AI Recommendations", href: "/recommendations" },
     ],
   },
   {
