@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSetting, setSetting, isSettingsStoreConfigured } from "@/lib/settings";
+import { isTrustedOrigin } from "@/lib/auth";
 
 const MANAGED_KEYS = ["YOUTUBE_API_KEY", "ANTHROPIC_API_KEY"] as const;
 
@@ -12,13 +13,19 @@ export async function GET() {
   const entries = await Promise.all(
     MANAGED_KEYS.map(async (key) => [key, mask(await getSetting(key))] as const)
   );
-  return NextResponse.json({
+  const res = NextResponse.json({
     storeConfigured: isSettingsStoreConfigured(),
     keys: Object.fromEntries(entries),
   });
+  res.headers.set("Cache-Control", "no-store");
+  return res;
 }
 
 export async function POST(req: NextRequest) {
+  if (!isTrustedOrigin(req)) {
+    return NextResponse.json({ error: "Rejected: cross-origin request" }, { status: 403 });
+  }
+
   const body = (await req.json()) as Record<string, string>;
   const updates = Object.entries(body).filter(([key, value]) =>
     (MANAGED_KEYS as readonly string[]).includes(key) && typeof value === "string" && value.trim()
@@ -31,7 +38,9 @@ export async function POST(req: NextRequest) {
     for (const [key, value] of updates) {
       await setSetting(key, value.trim());
     }
-    return NextResponse.json({ ok: true, saved: updates.map(([k]) => k) });
+    const res = NextResponse.json({ ok: true, saved: updates.map(([k]) => k) });
+    res.headers.set("Cache-Control", "no-store");
+    return res;
   } catch (err) {
     const message = err instanceof Error ? err.message : "Save failed";
     return NextResponse.json({ error: message }, { status: 503 });

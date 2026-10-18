@@ -5,8 +5,12 @@
 
 import { createHmac, timingSafeEqual, scryptSync } from "crypto";
 
-const COOKIE_NAME = "tubewire_admin_session";
-const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7; // 7 days
+// The __Host- prefix is enforced by browsers: such a cookie is rejected
+// outright unless it also has Secure, Path=/, and no Domain attribute —
+// which rules out it ever being sent to a sibling subdomain or over
+// plain HTTP, even if a future config change tried to relax those.
+const COOKIE_NAME = "__Host-tubewire_admin_session";
+const SESSION_TTL_MS = 1000 * 60 * 60 * 12; // 12 hours — short-lived on purpose
 
 function secret(): string {
   const s = process.env.SESSION_SECRET;
@@ -44,6 +48,20 @@ export function isValidSession(cookieValue: string | undefined): boolean {
     return false;
   }
   return role === "admin" && Date.now() < Number(expiresStr);
+}
+
+/** Defense-in-depth against CSRF beyond SameSite=Strict: reject any
+ *  state-changing request whose Origin header doesn't match the host
+ *  actually being served. A cross-site form or fetch() can't forge this
+ *  header. */
+export function isTrustedOrigin(req: { headers: Headers; url: string }): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return false; // same-origin browser requests always send Origin on POST
+  try {
+    return new URL(origin).host === new URL(req.url).host;
+  } catch {
+    return false;
+  }
 }
 
 export { COOKIE_NAME };
